@@ -1508,6 +1508,60 @@ body.cat-active .cat-bottom-nav { display: flex; }
   .cat-exam-icon svg { width: 40px; height: 40px; }
 }
 
+
+/* ── DI Chart Renderer ── */
+.di-chart-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.di-chart-title {
+  font-size: 12px; font-weight: 600; color: var(--text2);
+  margin-bottom: 14px; text-align: center;
+}
+.di-bar-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 8px;
+}
+.di-bar-label {
+  font-size: 12px; font-weight: 600; color: var(--text);
+  min-width: 28px; text-align: right;
+}
+.di-bar-track {
+  flex: 1; height: 22px; background: var(--bg3);
+  border-radius: 4px; overflow: hidden;
+}
+.di-bar-fill {
+  height: 100%; background: var(--gold);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 6px;
+  transition: width .4s ease;
+}
+.di-bar-val {
+  font-size: 10px; font-weight: 700; color: #0a0a00;
+}
+.di-table-wrap {
+  overflow-x: auto;
+}
+.di-table {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+}
+.di-table th {
+  background: var(--bg3); color: var(--text2);
+  padding: 8px 12px; text-align: center;
+  border: 1px solid var(--border2); font-weight: 700;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+}
+.di-table td {
+  padding: 8px 12px; text-align: center;
+  border: 1px solid var(--border2); color: var(--text);
+  font-weight: 500;
+}
+.di-table tr:nth-child(even) td { background: var(--bg2); }
+
 </style>
 </head>
 <body>
@@ -2754,7 +2808,7 @@ function renderQ(idx) {
   // ── Stem panel ──
   var stemPanel = document.getElementById('stem-panel');
   if (q.stem) {
-    document.getElementById('stem-text').innerHTML = q.stem;
+    document.getElementById('stem-text').innerHTML = q.stemType ? (renderDIChart(q.stem, q.stemType) || q.stem) : q.stem;
     stemPanel.style.display = 'block';
     // Expand when switching to a new stem group
     if (stemPanel._currentStemId !== q.stemId) {
@@ -4032,6 +4086,79 @@ function launchTopicExamFetch(subjectFile, folderId) {
     // restore after exam ends
     SECTIONS = savedSections;
   });
+}
+
+
+// ── DI Chart Renderer ────────────────────────────────────────
+function renderDIChart(stem, stemType) {
+  if (!stem || !stemType) return '';
+
+  // Parse [BAR_DATA] or [TABLE_DATA]
+  var barMatch = stem.match(/\[BAR_DATA\]([^\[]*)/);
+  var tableMatch = stem.match(/\[TABLE_DATA\]([^\[]*)/);
+
+  var chartHTML = '';
+
+  if (barMatch || stemType === 'di-bar') {
+    var raw = barMatch ? barMatch[1].trim() : '';
+    if (!raw && stem.includes('|')) {
+      // Parse pipe-separated data in stem
+      var lines = stem.split('\n').filter(function(l){ return l.includes('|'); });
+      raw = lines.join('\n');
+    }
+    if (raw) {
+      var rows = raw.trim().split('\n').filter(function(l){ return l.trim(); });
+      var header = rows[0].split('|').map(function(s){ return s.trim(); });
+      var dataRows = rows.slice(1);
+      
+      // Get max value for scaling
+      var vals = dataRows.map(function(r){ return parseFloat(r.split('|')[1]) || 0; });
+      var maxVal = Math.max.apply(null, vals);
+
+      chartHTML += '<div class="di-chart-wrap">';
+      chartHTML += '<div class="di-chart-title">' + header[0] + ' vs ' + header[1] + '</div>';
+      dataRows.forEach(function(row, i) {
+        var parts = row.split('|').map(function(s){ return s.trim(); });
+        var label = parts[0];
+        var val = parseFloat(parts[1]) || 0;
+        var pct = maxVal > 0 ? (val/maxVal*100).toFixed(1) : 0;
+        chartHTML += '<div class="di-bar-row">';
+        chartHTML += '<div class="di-bar-label">' + label + '</div>';
+        chartHTML += '<div class="di-bar-track">';
+        chartHTML += '<div class="di-bar-fill" style="width:' + pct + '%">';
+        chartHTML += '<span class="di-bar-val">' + val + '</span>';
+        chartHTML += '</div></div></div>';
+      });
+      chartHTML += '</div>';
+    }
+  }
+
+  if (tableMatch || stemType === 'di-table') {
+    var raw = tableMatch ? tableMatch[1].trim() : '';
+    if (!raw && stem.includes('|')) {
+      var lines = stem.split('\n').filter(function(l){ return l.includes('|'); });
+      raw = lines.join('\n');
+    }
+    if (raw) {
+      var rows = raw.trim().split('\n').filter(function(l){ return l.trim() && !l.match(/^[-|\s]+$/); });
+      chartHTML += '<div class="di-chart-wrap"><div class="di-table-wrap"><table class="di-table">';
+      rows.forEach(function(row, i) {
+        var cells = row.split('|').map(function(s){ return s.trim(); }).filter(Boolean);
+        chartHTML += '<tr>';
+        cells.forEach(function(cell) {
+          if (i === 0) {
+            chartHTML += '<th>' + cell + '</th>';
+          } else {
+            chartHTML += '<td>' + cell + '</td>';
+          }
+        });
+        chartHTML += '</tr>';
+      });
+      chartHTML += '</table></div></div>';
+    }
+  }
+
+  return chartHTML;
 }
 
 </script>
