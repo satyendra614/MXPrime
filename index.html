@@ -3302,7 +3302,7 @@ var CAT_EXAM_DATA = {
     color: 'var(--gold)',
     live: true,
     mocks: [
-      { num:1, name:'RBI Assistant Mock 1', meta:'103 Qs · 60 min · Eng + Reasoning + Quant', live:true, file:'data/mock_rbi_1.json' },
+      { num:1, name:'RBI Assistant Mock 1', meta:'103 Qs · 60 min · Eng + Reasoning + Quant', live:true, file:'mock_rbi_1.json' },
       { num:2, name:'RBI Assistant Mock 2', meta:'Dropping soon', live:false },
       { num:3, name:'RBI Assistant Mock 3', meta:'Dropping soon', live:false }
     ]
@@ -3391,11 +3391,25 @@ function openCategory(cat) {
   document.getElementById('catnav-mocks').classList.add('active');
 }
 
-function startFromFolder() {
-  document.getElementById('mock-avatar').textContent = user.name.charAt(0).toUpperCase();
-  document.getElementById('mock-uname').textContent  = user.name;
-  document.body.classList.remove('cat-active');
-  startExam();
+function startFromFolder(mockFile) {
+  if (!mockFile) { startExam(); return; }
+  loadMock(mockFile, function(mockData) {
+    ALL_QUESTIONS = mockData.questions;
+    // rebuild SECTIONS from mock data if provided
+    if (mockData.sections) {
+      var start = 0;
+      SECTIONS = mockData.sections.map(function(s){
+        var sec = {name:s.name, qs:s.qs, mins:s.mins, start:start};
+        start += s.qs;
+        return sec;
+      });
+    }
+    document.getElementById('mock-avatar').textContent = user.name.charAt(0).toUpperCase();
+    document.getElementById('mock-uname').textContent  = user.name;
+    if (mockData.name) document.getElementById('ex-mockname').textContent = mockData.name;
+    document.body.classList.remove('cat-active');
+    startExam();
+  });
 }
 
 // Remove cat-active when leaving cat-page
@@ -3597,8 +3611,45 @@ var SUBJ_LABELS = { reasoning:'Reasoning', maths:'Maths', english:'English' };
 
 var currentSubj = '';
 
+// Map subject keys to their JSON files
+var SUBJECT_FILES = {
+  'reasoning': 'topics_reasoning.json',
+  'quant':     'topics_quant.json',
+  'english':   'topics_english.json'
+};
+
 function openSubject(subj) {
   currentSubj = subj;
+
+  // If TOPICS[subj] is empty, fetch it first
+  if (!TOPICS[subj] || TOPICS[subj].length === 0) {
+    var file = SUBJECT_FILES[subj];
+    if (!file) { return; }
+    showLoadingOverlay('Loading topics...');
+    fetch(getBase() + '/' + file)
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        hideLoadingOverlay();
+        // Inject into TOPICS
+        TOPICS[subj] = data.topics.map(function(t){
+          return {
+            icon: t.icon,
+            name: t.name,
+            subfolders: t.subfolders
+          };
+        });
+        _doOpenSubject(subj);
+      })
+      .catch(function(e){
+        hideLoadingOverlay();
+        alert('Failed to load topics. Check connection.');
+      });
+    return;
+  }
+  _doOpenSubject(subj);
+}
+
+function _doOpenSubject(subj) {
   var topics = TOPICS[subj];
   var label  = SUBJ_LABELS[subj];
   document.getElementById('ts-breadcrumb').textContent = label;
@@ -3861,7 +3912,7 @@ function getBase() {
 // Load registry once
 function loadRegistry(cb) {
   if (_registry) { cb(_registry); return; }
-  fetch(getBase() + '/data/registry.json')
+  fetch(getBase() + '/registry.json')
     .then(function(r){ return r.json(); })
     .then(function(data){
       _registry = data;
@@ -3878,7 +3929,7 @@ function loadRegistry(cb) {
 function loadMock(fileUrl, cb) {
   if (_loadedMocks[fileUrl]) { cb(_loadedMocks[fileUrl]); return; }
   showLoadingOverlay('Loading mock...');
-  fetch(getBase() + '/' + fileUrl)
+  fetch(getBase() + '/' + fileUrl.replace('data/', ''))
     .then(function(r){ return r.json(); })
     .then(function(data){
       _loadedMocks[fileUrl] = data;
@@ -3895,7 +3946,7 @@ function loadMock(fileUrl, cb) {
 function loadTopicSubject(fileUrl, cb) {
   if (_loadedTopics[fileUrl]) { cb(_loadedTopics[fileUrl]); return; }
   showLoadingOverlay('Loading questions...');
-  fetch(getBase() + '/' + fileUrl)
+  fetch(getBase() + '/' + fileUrl.replace('data/', ''))
     .then(function(r){ return r.json(); })
     .then(function(data){
       _loadedTopics[fileUrl] = data;
