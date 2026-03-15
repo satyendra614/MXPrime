@@ -1,0 +1,121 @@
+{
+  "exams": [
+    {
+      "id": "rbi",
+      "name": "RBI Assistant",
+      "subtitle": "2026 \u00b7 Prelims",
+      "color": "#e6a832",
+      "live": true,
+      "mocks": [
+        {
+          "id": "mock_rbi_1",
+          "num": 1,
+          "name": "RBI Assistant Mock 1",
+          "meta": "103 Qs \u00b7 60 min",
+          "live": true,
+          "file": "data/mock_rbi_1.json"
+        },
+        {
+          "id": "mock_rbi_2",
+          "num": 2,
+          "name": "RBI Assistant Mock 2",
+          "meta": "Dropping soon",
+          "live": false,
+          "file": null
+        },
+        {
+          "id": "mock_rbi_3",
+          "num": 3,
+          "name": "RBI Assistant Mock 3",
+          "meta": "Dropping soon",
+          "live": false,
+          "file": null
+        }
+      ]
+    },
+    {
+      "id": "ibps-po",
+      "name": "IBPS PO",
+      "subtitle": "2026 \u00b7 Prelims",
+      "color": "#3b82f6",
+      "live": false,
+      "mocks": []
+    },
+    {
+      "id": "ibps-clerk",
+      "name": "IBPS Clerk",
+      "subtitle": "2026 \u00b7 Prelims",
+      "color": "#8b5cf6",
+      "live": false,
+      "mocks": []
+    },
+    {
+      "id": "sbi-po",
+      "name": "SBI PO",
+      "subtitle": "2026 \u00b7 Prelims",
+      "color": "#3dba6e",
+      "live": false,
+      "mocks": []
+    },
+    {
+      "id": "sbi-clerk",
+      "name": "SBI Clerk",
+      "subtitle": "2026 \u00b7 Prelims",
+      "color": "#f97316",
+      "live": false,
+      "mocks": []
+    },
+    {
+      "id": "rrb-officer",
+      "name": "RRB Officer",
+      "subtitle": "2026 \u00b7 Prelims",
+      "color": "#06b6d4",
+      "live": false,
+      "mocks": []
+    },
+    {
+      "id": "rrb-asst",
+      "name": "RRB Assistant",
+      "subtitle": "2026 \u00b7 Prelims",
+      "color": "#22d3ee",
+      "live": false,
+      "mocks": []
+    },
+    {
+      "id": "ibps-so",
+      "name": "IBPS SO",
+      "subtitle": "2026 \u00b7 Prelims",
+      "color": "#a78bfa",
+      "live": false,
+      "mocks": []
+    },
+    {
+      "id": "rrb-po",
+      "name": "RRB PO",
+      "subtitle": "2026 \u00b7 Prelims",
+      "color": "#fb7185",
+      "live": false,
+      "mocks": []
+    }
+  ],
+  "topics": [
+    {
+      "id": "topics_reasoning",
+      "name": "Reasoning",
+      "icon": "\ud83e\udde0",
+      "file": "data/topics_reasoning.json"
+    },
+    {
+      "id": "topics_quant",
+      "name": "Maths / Quant",
+      "icon": "\ud83d\udd22",
+      "file": "data/topics_quant.json"
+    },
+    {
+      "id": "topics_english",
+      "name": "English",
+      "icon": "\ud83d\udcd6",
+      "file": "data/topics_english.json"
+    }
+  ]
+}
