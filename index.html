@@ -1579,6 +1579,18 @@ body.cat-active .cat-bottom-nav { display: flex; }
   box-shadow: 0 2px 12px rgba(66,133,244,.2);
 }
 
+
+/* Rank / percentile pills */
+.rank-pill {
+  display:flex;flex-direction:column;align-items:center;
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:12px;padding:10px 18px;min-width:80px;
+}
+.rank-pill-v {
+  font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:800;color:var(--gold);
+}
+.rank-pill-k { font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-top:2px; }
+
 </style>
 </head>
 <body>
@@ -2249,9 +2261,10 @@ body.cat-active .cat-bottom-nav { display: flex; }
   <div class="result-wrap">
     <div class="result-top">
       <div class="result-logo">M<span class="x">x</span></div>
-      <div class="result-subtitle">RBI Assistant Mock 1 — Scorecard</div>
+      <div class="result-subtitle" id="r-subtitle">RBI Assistant Mock 1 — Scorecard</div>
       <div class="score-big" id="r-score" style="color:var(--gold);">0</div>
       <div class="score-out" id="r-score-out">out of 100</div>
+      <div id="r-rank-row" style="display:flex;gap:16px;justify-content:center;margin:10px 0;flex-wrap:wrap;"></div>
       <div class="result-stats-row" id="r-stats-row"></div>
     </div>
     <div class="result-sec-table">
@@ -2993,6 +3006,8 @@ function renderPalette() {
 }
 
 function updateSubmitBtn() {
+  var isLastSec = examState.curSec === SECTIONS.length - 1;
+
   if (topicMode) {
     document.getElementById('btn-sec-submit').style.display  = 'none';
     document.getElementById('btn-final-submit').style.display = 'block';
@@ -3004,14 +3019,26 @@ function updateSubmitBtn() {
     if (df) { df.style.display = 'block'; df.textContent = '✓ Submit Test'; df.onclick = function(){ closeDrawer(); topicSubmitConfirm(); }; }
     return;
   }
-  const allDone = examState.secDone.every(d => d);
-  document.getElementById('btn-sec-submit').style.display  = allDone ? 'none' : 'block';
-  document.getElementById('btn-final-submit').style.display = allDone ? 'block' : 'none';
-  document.getElementById('btn-final-submit').textContent = '🏁 Final Submit';
-  var db = document.getElementById('d-btn-sec');
-  var df = document.getElementById('d-btn-final');
-  if (db) db.style.display = allDone ? 'none' : 'block';
-  if (df) df.style.display = allDone ? 'block' : 'none';
+
+  if (isLastSec) {
+    // Last section → show Final Submit directly, no section submit needed
+    document.getElementById('btn-sec-submit').style.display  = 'none';
+    document.getElementById('btn-final-submit').style.display = 'block';
+    document.getElementById('btn-final-submit').textContent  = '🏁 Final Submit';
+    document.getElementById('btn-final-submit').onclick = function(){ openFinalModal(); };
+    var db2 = document.getElementById('d-btn-sec');
+    var df2 = document.getElementById('d-btn-final');
+    if (db2) db2.style.display = 'none';
+    if (df2) { df2.style.display = 'block'; df2.textContent = '🏁 Final Submit'; df2.onclick = function(){ closeDrawer(); openFinalModal(); }; }
+  } else {
+    // Not last section → show Submit Section
+    document.getElementById('btn-sec-submit').style.display  = 'block';
+    document.getElementById('btn-final-submit').style.display = 'none';
+    var db3 = document.getElementById('d-btn-sec');
+    var df3 = document.getElementById('d-btn-final');
+    if (db3) db3.style.display = 'block';
+    if (df3) df3.style.display = 'none';
+  }
 }
 
 // ─── Section Submit ───
@@ -3101,15 +3128,47 @@ function closeModal(id) {
 
 // ─── Results ───
 function showResult() {
-  // Save to Firebase if logged in
+  // Update result subtitle
+  var mockNameEl = document.getElementById('ex-mockname');
+  var mockName = mockNameEl ? mockNameEl.textContent : 'Mock';
+  var subtitleEl = document.getElementById('r-subtitle');
+  if (subtitleEl) subtitleEl.textContent = mockName + ' — Scorecard';
+
+  // Save to Firebase and load rank
   if (window.saveResultToFirestore && window._fbUser) {
-    var score  = examState.score || 0;
-    var total  = ALL_QUESTIONS.length;
+    var score   = examState.score || 0;
+    var total   = ALL_QUESTIONS.length;
     var correct = examState.correct || 0;
     var wrong   = examState.wrong || 0;
-    var mockId  = 'mock_rbi_1';
-    var mockName = document.getElementById('ex-mockname') ? document.getElementById('ex-mockname').textContent : 'Mock 1';
+    var mockId  = topicMode ? ('topic_' + (topicModeSf ? topicModeSf.id : 'test')) : (window._currentMockId || 'mock_rbi_1');
     window.saveResultToFirestore(mockId, mockName, score, total, correct, wrong, 0);
+
+    // Load rank after short delay
+    setTimeout(function() {
+      if (window.loadLeaderboard) {
+        window.loadLeaderboard(mockId).then(function(results) {
+          if (!results || results.length === 0) return;
+          var myScore = score;
+          var rank = 1;
+          results.forEach(function(r) { if (r.score > myScore) rank++; });
+          var total_students = results.length;
+          var percentile = total_students > 1
+            ? (((total_students - rank) / (total_students - 1)) * 100).toFixed(1)
+            : '100.0';
+          var rankRow = document.getElementById('r-rank-row');
+          if (rankRow) {
+            rankRow.innerHTML =
+              '<div class="rank-pill"><div class="rank-pill-v">#' + rank + '</div><div class="rank-pill-k">Rank</div></div>' +
+              '<div class="rank-pill"><div class="rank-pill-v">' + percentile + '%</div><div class="rank-pill-k">Percentile</div></div>' +
+              '<div class="rank-pill"><div class="rank-pill-v">' + total_students + '</div><div class="rank-pill-k">Students</div></div>';
+          }
+        });
+      }
+    }, 1500);
+  } else {
+    // No Firebase - hide rank row
+    var rankRow = document.getElementById('r-rank-row');
+    if (rankRow) rankRow.style.display = 'none';
   }
   let totalScore = 0;
   let ta=0, tc=0, tw=0;
@@ -3493,6 +3552,7 @@ function startFromFolder(mockFile) {
   if (!mockFile) { startExam(); return; }
   loadMock(mockFile, function(mockData) {
     ALL_QUESTIONS = mockData.questions;
+    window._currentMockId = mockData.id || mockFile.replace(".json","").replace("data/","");
     // rebuild SECTIONS from mock data if provided
     if (mockData.sections) {
       var start = 0;
@@ -3713,6 +3773,7 @@ var currentSubj = '';
 var SUBJECT_FILES = {
   'reasoning': 'topics_reasoning.json',
   'quant':     'topics_quant.json',
+  'maths':     'topics_quant.json',
   'english':   'topics_english.json'
 };
 
@@ -4087,6 +4148,7 @@ function hideLoadingOverlay() {
 function startFromFolder(mockFile) {
   loadMock(mockFile, function(mockData) {
     ALL_QUESTIONS = mockData.questions;
+    window._currentMockId = mockData.id || mockFile.replace(".json","").replace("data/","");
     document.getElementById('mock-avatar').textContent = user.name.charAt(0).toUpperCase();
     document.getElementById('mock-uname').textContent  = user.name;
     document.getElementById('ex-mockname').textContent = mockData.name;
